@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+const maxMessageLength = uint32(1 << 15)
+
 type MessageType byte
 
 const (
@@ -181,6 +183,9 @@ func ReadMessage(rr io.Reader) (Message, error) {
 		return Message{}, fmt.Errorf("reading message length (read %d [of %d] bytes): %s", n, len(l), err)
 	}
 	u := binary.BigEndian.Uint32(l[:])
+	if u > maxMessageLength {
+		return Message{}, fmt.Errorf("message length %d bytes longer than maximum length %d bytes", u, maxMessageLength)
+	}
 	buf := make([]byte, u)
 	n, err = io.ReadFull(rr, buf)
 	if err != nil {
