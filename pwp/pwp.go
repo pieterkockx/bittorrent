@@ -140,18 +140,31 @@ func unmarshalMessage(b []byte) (Message, error) {
 	case MessageInterested:
 		fallthrough
 	case MessageNotInterested:
+		if len(b) != 1 {
+			return Message{}, fmt.Errorf("%s message has wrong length (got %d bytes, expected 1 bytes)", typ, len(b))
+		}
 		break
 	case MessageHave:
+		if len(b) != 5 {
+			return Message{}, fmt.Errorf("%s message has wrong length (got %d bytes, expected 5 bytes)", typ, len(b))
+		}
 		msg.PieceIndex = binary.BigEndian.Uint32(b[1:5])
 	case MessageRequest:
 		fallthrough
 	case MessageCancel:
+		if len(b) != 13 {
+			return Message{}, fmt.Errorf("%s message has wrong length (got %d bytes, expected 13 bytes)", typ, len(b))
+		}
 		msg.PieceIndex = binary.BigEndian.Uint32(b[1:5])
 		msg.BlockOffset = binary.BigEndian.Uint32(b[5:9])
 		msg.BlockLength = binary.BigEndian.Uint32(b[9:13])
 	case MessageBitfield:
+		// Already checked that message is at least 1 byte long
 		msg.Data = b[1:]
 	case MessagePiece:
+		if len(b) < 9 {
+			return Message{}, fmt.Errorf("%s message has wrong length (got %d bytes, expected at least 9 bytes)", typ, len(b))
+		}
 		msg.PieceIndex = binary.BigEndian.Uint32(b[1:5])
 		msg.BlockOffset = binary.BigEndian.Uint32(b[5:9])
 		msg.Data = b[9:]
