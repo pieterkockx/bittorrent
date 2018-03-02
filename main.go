@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/pieterkockx/bittorrent/bencode"
+	"github.com/pieterkockx/bittorrent/pwp"
 )
 
 type client struct {
@@ -292,13 +293,15 @@ func main() {
 
 	for piece := range pieces {
 		log.Printf("main: getting piece %d\n", piece)
+
 		select {
 		case wait <- 1:
+		// Only available if peer was closed
 		case peer = <-peers:
 			log.Printf("main: got new connection to %s\n", peer.info.addr)
 		}
 
-		go func(p uint32) {
+		go func(out chan pwp.Message, p uint32) {
 			log.Printf("main (forked): going to get piece %d\n", p)
 
 			l := m.pieceLength
@@ -310,7 +313,7 @@ func main() {
 				}
 			}
 
-			err := getPiece(peer.out, p, l, m)
+			err := getPiece(out, p, l, m)
 			<-wait
 			if err != nil {
 				// Avoid sending on closed pieces channel.
@@ -325,7 +328,7 @@ func main() {
 			}
 			log.Printf("main (forked): got piece %d\n", p)
 			c.piecesSet[p] = true
-		}(piece)
+		}(peer.out, piece)
 	}
 	log.Printf("main: finished succesfully\n")
 }
